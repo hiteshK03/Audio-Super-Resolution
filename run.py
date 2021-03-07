@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/media/viani/CoolStuff/Acads/5thSem/EE338/application/Audio-Super-Resolution')
+sys.path.append('path_to_main_folder')
 
 import os
 import matplotlib
