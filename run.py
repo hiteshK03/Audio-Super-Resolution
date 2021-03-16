@@ -10,8 +10,8 @@ import numpy as np
 
 from model import *
 from train import *
-from io import *
-# from io import load_h5, upsample_wav
+# from io import *
+from utils import load_h5, upsample_wav
 import dataset
 
 # ----------------------------------------------------------------------------
@@ -33,7 +33,7 @@ def make_parser():
     help='number of epochs to train')
   train_parser.add_argument('--batch-size', type=int, default=128,
     help='training batch size')
-  train_parser.add_argument('--logdir', default='./',
+  train_parser.add_argument('--logdir', default='./logs',
     help='folder where logs will be stored')
   train_parser.add_argument('--layers', default=4, type=int,
     help='number of layers in each of the D and U halves of the network')

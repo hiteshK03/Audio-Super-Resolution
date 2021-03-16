@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import Dataset
 
 import numpy as np
 
@@ -14,3 +15,20 @@ def avg_sqrt_l2_loss(X, Y):
 	avg_snr = torch.mean(snr, dim=0)
 
 	return avg_sqrt_l2, avg_snr
+
+class LabelsDataset(Dataset):
+
+	def __init__(self, datapoints,labels):
+
+		self._datapoints = datapoints
+		self._labels = labels
+
+	def __len__(self):
+		return len(self._datapoints)
+
+	def __getitem__(self, idx):
+		
+		datapoint = self._datapoints[idx]
+		label = self._labels[idx]
+
+		return datapoint, label

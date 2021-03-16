@@ -37,19 +37,8 @@ class PixelShuffle1D(torch.nn.Module):
         x = x.permute(0, 2, 3, 1).contiguous()
         x = x.view(batch_size, long_channel_len, long_width)
         # print(x.shape)
-
+  
         return x
-
-# def SubPixel1d(tensor, r): #(b,r,w)
-#     ps = nn.PixelShuffle(r)
-#     print(tensor.shape)
-#     tensor = torch.unsqueeze(tensor, -1) #(b,r,w,1)
-#     print(tensor.shape)
-#     tensor = ps(tensor)
-#     print(tensor.shape) #(b,1,w*r,r)
-#     tensor = torch.mean(tensor, -1)
-#     print(tensor.shape) #(b,1,w*r)
-#     return tensor
 
 class Down1D(nn.Module):
 	"""doc string for Down1D"""
@@ -131,7 +120,7 @@ class AudioUnet(nn.Module):
 		nn.init.normal_(self.final.weight)
 
 	def forward(self, x):
-		print(x.shape)
+		# print(x.shape)
 		# num_layers = 4
 		down_outs = [x]
 		for i in range(self.num_layers):

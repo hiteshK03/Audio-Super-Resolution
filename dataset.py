@@ -7,7 +7,7 @@ Created on Thu Mar 12 20:52:19 2020
 
 import numpy as np
 import h5py
-from io import *
+from utils import *
 
 # ----------------------------------------------------------------------------
 
@@ -17,18 +17,7 @@ class DataSet(object):
                fake_data=False,
                one_hot=False,
                dtype=None):
-    # def load_h5(h5_path):
-    #   # load training data
-    #   with h5py.File(h5_path, 'r') as hf:
-    #     print ('List of arrays in input file:')
-    #     print(hf.keys())
-    #     X = np.array(hf.get('data'))
-    #     Y = np.array(hf.get('label'))
-    #     print ('Shape of X:', X.shape)
-    #     print ('Shape of Y:', Y.shape)
-
-    #   return X, Y
-
+    
     datapoints,labels=datapoints,labels
     if labels is None:
       labels = np.zeros((len(datapoints),))
