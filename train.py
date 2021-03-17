@@ -9,7 +9,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-# from dataset import DataSet
 from model import *
 from utility import *
 from utils import load_h5 
@@ -22,7 +21,6 @@ class Solver(object):
 	def __init__(self, config):
 
 		self.config = config
-		# self.data_loader = data_loader make separate function for dataloader
 
 		self.train_path = self.config['train_path']
 		self.eval_path = self.config['eval_path']
@@ -81,104 +79,97 @@ class Solver(object):
 
 		self.train_dataset = LabelsDataset(X_train, Y_train)
 		self.eval_dataset = LabelsDataset(X_val, Y_val)
+		print('dataset loaded')
 
-	def load_model(self, resume_training, epoch):
-		resume_training=True
+	def load_model(self, resume_training, path):
+		# model_path = os.path.join(self.model_save_dir, 'model.tar')
+		checkpoint = torch.load(path)
 		if resume_training:
-			model_path = os.path.join(self.model_save_dir, '{}-model.ckpt'.format(epoch))
-			self.model.load_state_dict(torch.load(model_path))
-		else:
-			self.model = AudioUnet(self.num_layers)
-			self.model = self.model.to(self.device)
-			self.model.load_state_dict(torch.load('./AudioUnet.pth'))
+			self.model.load_state_dict(checkpoint['model_state_dict'])
+			self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+			self.curr_epoch = checkpoint['epoch']
+		else: # for testing purposes (currently not used)
+			self.model.load_state_dict(checkpoint['model_state_dict'])
 			self.model.eval()
 
-	def eval_err(self, dataset, n_batch=128):
+	def val(self, dataset, n_batch=128):
 		"""Error Evaluation loops"""
 		batch_iterator = DataLoader(dataset, n_batch, shuffle=True, num_workers=4)
 
-		l2_loss, snr = 0, 0
-		tot_l2_loss, tot_snr = 0, 0
+		l2_loss, l2_snr = 0, 0
+		tot_l2_loss, tot_snr = 0.0, 0.0
 		self.model.eval()
-		for bn, X, Y in enumerate(batch_iterator):
+		for X, Y in batch_iterator:
+			X, Y = X.to(self.device), Y.to(self.device) 
 			output = self.model(X)
 			l2_loss, l2_snr = avg_sqrt_l2_loss(Y, output)
 			tot_l2_loss += l2_loss.item()
 			tot_snr += l2_snr.item()
-		return tot_l2_loss / (bn+1), tot_snr / (bn+1)
+		return tot_l2_loss / len(batch_iterator), tot_snr / len(batch_iterator)
 
 	def train(self):
-
-		# self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-		# self.model = AudioUnet(self.num_layers)
-		# print('model created')
-
-		# #Data Parallel
-		# # if torch.cuda.device_count() > 1:
-		# # 	model = nn.DataParallel(model)
-		# self.model = self.model.to(self.device)
-
-		# if self.alg == "adam":
-		# 	self.optimizer = torch.optim.Adam(self.model.parameters(), self.lr, betas=self.betas)
-		# else:
-		# 	raise ValueError('Invalid Optimizer: ' + self.alg)
 
 		self.build_model()
 		self.print_network()
 		self.build_tensorboard()
 		self.load_dataset()
-		# X_train, Y_train = load_h5(self.train_path)
-		# X_val, Y_val = load_h5(self.eval_path)
 
-		# print('data loaded from .h5')
-
-		# determine super-resolution level
-		# n_dim, n_chan = Y_train[0].shape
-		# self.r = Y_train[0].shape[1] / X_train[0].shape[1]
-		# assert n_chan == 1
-
-		# self.train_dataset = LabelsDataset(X_train, Y_train)
-		# self.eval_dataset = LabelsDataset(X_val, Y_val)
-		# print('dataset created')
+		model_path = os.path.join(self.model_save_dir, 'model.tar')
+		if os.path.exists(model_path):
+			self.load_model(resume_training=True, path=model_path)
+		else:
+			self.curr_epoch = 0
 
 		data_loader = DataLoader(self.train_dataset, self.batch_size, shuffle=True, num_workers=4)
 		print('data loaded')
 
 		#train Loops
-		start_time = time.time()
 
-		for epoch in range(self.epoch):
-			print('Epoch [{}/{}]'.format(epoch+1,self.epoch))
+		for self.curr_epoch in range(self.epoch):
+			start_time = time.time()
+			i = 0
+			tot_l2_loss = 0.0
+			tot_l2_snr = 0.0
+			print('Epoch [{}/{}]'.format(self.curr_epoch+1,self.epoch))
+			self.model.train()
 			for X, Y in data_loader:
-				self.model.train()
-				# print('idhar')
 				X, Y = X.to(self.device), Y.to(self.device)
-
 				output = self.model(X)
-				tr_l2_loss, tr_l2_snr = avg_sqrt_l2_loss(Y, output) 
+				tr_l2_loss, tr_l2_snr = avg_sqrt_l2_loss(Y, output)
 				self.optimizer.zero_grad()
 				tr_l2_loss.backward()
 				self.optimizer.step()
+				
+				tot_l2_loss += tr_l2_loss.item()
+				tot_l2_snr += tr_l2_snr.item()
+
+				i+=1
+				if i%100 == 0:
+					print("Batch number: {:03d}, Training: Loss: {:.4f}, SNR: {:.4f}".format(i, tot_l2_loss/(i), tot_l2_snr/(i)))
 
 			end_time = time.time()
-			print('epoch [{}/{}], loss:{:.4f}'.format(epoch+1, self.epoch, tr_l2_loss.data[0]))
-			tr_l2_loss, tr_l2_snr = self.eval_err(self.train_dataset, n_batch=self.batch_size)
-			va_l2_loss, va_l2_snr = self.eval_err(self.eval_dataset, n_batch=self.batch_size)
+			avg_l2_loss = tot_l2_loss/len(data_loader)
+			avg_snr_loss = tot_l2_snr/len(data_loader)
+			va_l2_loss, va_l2_snr = self.val(self.eval_dataset, n_batch=self.batch_size)
 
-			print("Epoch {} of {} took {:.3f}s ({} minibatches)".format(epoch, self.epoch, end_time-start_time, len(self.train_dataset//self.batch_size)))
-			print("Training l2_loss/segsnr:\t\t{:.6f}\t{:.6f}".format(tr_l2_loss, tr_l2_snr))
+			print("Epoch {} of {} took {:.3f}s ({} minibatches)".format(self.curr_epoch+1, self.epoch, end_time-start_time, len(data_loader)))
+			print("Training l2_loss/segsnr:\t\t{:.6f}\t{:.6f}".format(avg_l2_loss, avg_snr_loss))
 			print("Validation l2_loss/segsnr:\t\t{:.6f}\t{:.6f}".format(va_l2_loss, va_l2_snr))
 			
 			#Add Scalar to Summary Writer
-			self.writer.add_scalar('tr_l2_loss', tr_l2_loss, epoch)
-			self.writer.add_scalar('tr_l2_snr', tr_l2_snr, epoch)
-			self.writer.add_scalar('va_l2_snr', va_l2_snr, epoch)
+			self.writer.add_scalar('tr_l2_loss', avg_l2_loss, self.curr_epoch)
+			self.writer.add_scalar('tr_l2_snr', avg_snr_loss, self.curr_epoch)
+			self.writer.add_scalar('va_l2_loss', va_l2_loss, self.curr_epoch)
+			self.writer.add_scalar('va_l2_snr', va_l2_snr, self.curr_epoch)
 
 			#checkpoint the model
-			if (epoch+1) % self.model_save_step == 0:
-				model_path = os.path.join(self.model_save_dir, '{}-model.ckpt'.format(epoch+1))
-				torch.save(self.model.state_dict(), model_path)
+			if (self.curr_epoch+1) % self.model_save_step == 0:
+				model_path = os.path.join(self.model_save_dir, 'model.tar')
+				torch.save({
+					'epoch':self.curr_epoch,
+					'model_state_dict': self.model.state_dict(),
+					'optimizer_state_dict': self.optimizer.state_dict(),
+					}, model_path)
 				print('Saved Model checkpoints into {}'.format(self.model_save_dir))
 
-		torch.save(self.model.state_dict(), './AudioUnet.pth')
+		torch.save(self.model.state_dict(), './AudioUnet.pt')

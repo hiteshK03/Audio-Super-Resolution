@@ -45,9 +45,9 @@ def make_parser():
     help='beta1 for adam')
   train_parser.add_argument('--b2', default=0.999, type=float,
     help='beta2 for adam')
-  train_parser.add_argument('--save_dir', default='save-dir',
+  train_parser.add_argument('--save_dir', default='./output/',
     help='Directory to save Model checkpoints')
-  train_parser.add_argument('--save_step', default=10, type=int,
+  train_parser.add_argument('--save_step', default=100, type=int,
     help='epochs after which to save the model')
 
 
@@ -72,17 +72,11 @@ def make_parser():
 
 def train(args):
 
-
-  # create model
-  # model = get_model(args, 128, 4, from_ckpt=False, train=True)
-
   # train model
   config = { 'train_path':args.train, 'eval_path':args.val, 'epoch':args.epochs ,'alg' : args.alg, 'lr' : args.lr, 'b1' : args.b1, 'b2':args.b2,
-                   'batch_size': args.batch_size, 'num_layers': args.layers,'log_dir': args.logdir, 'model_save_dir':'./output/', 'model_save_step':'./output/'}
+                   'batch_size': args.batch_size, 'num_layers': args.layers,'log_dir': args.logdir, 'model_save_dir':args.save_dir, 'model_save_step':args.save_step}
   sol = Solver(config)
   sol.train()
-
-  # model.fit(X_train, Y_train, X_val, Y_val, n_epoch=args.epochs)
 
 def eval(args):
   # load model
