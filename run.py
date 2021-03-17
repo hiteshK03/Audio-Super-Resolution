@@ -47,7 +47,7 @@ def make_parser():
     help='beta2 for adam')
   train_parser.add_argument('--save_dir', default='./output/',
     help='Directory to save Model checkpoints')
-  train_parser.add_argument('--save_step', default=100, type=int,
+  train_parser.add_argument('--save_step', default=10, type=int,
     help='epochs after which to save the model')
 
 
