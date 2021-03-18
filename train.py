@@ -1,23 +1,12 @@
 import os
 import time
-import h5py
-from datetime import datetime, timedelta
-
-import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from model import *
-from utility import *
-from utils import load_h5 
+from utils import load_h5, LabelsDataset, avg_sqrt_l2_loss
 
-import librosa
-
-default_opt = {'alg': 'adam', 'lr': 1e-4, 'b1': 0.99, 'b2': 0.999, 'num_layers': 4, 'batch_size': 128}
-
-class Solver(object):
+class Trainer(object):
 	def __init__(self, config):
 
 		self.config = config
@@ -40,10 +29,6 @@ class Solver(object):
 		self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 		self.model = AudioUnet(self.num_layers)
-
-		#Data Parallel
-		# if torch.cuda.device_count() > 1:
-		# 	model = nn.DataParallel(model)
 		self.model = self.model.to(self.device)
 
 		if self.alg == "adam":
@@ -81,9 +66,9 @@ class Solver(object):
 		self.eval_dataset = LabelsDataset(X_val, Y_val)
 		print('dataset loaded')
 
-	def load_model(self, resume_training, path):
-		# model_path = os.path.join(self.model_save_dir, 'model.tar')
-		checkpoint = torch.load(path)
+	def load_model(self, resume_training):
+		model_path = os.path.join(self.model_save_dir, 'model.tar')
+		checkpoint = torch.load(model_path)
 		if resume_training:
 			self.model.load_state_dict(checkpoint['model_state_dict'])
 			self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -116,7 +101,7 @@ class Solver(object):
 
 		model_path = os.path.join(self.model_save_dir, 'model.tar')
 		if os.path.exists(model_path):
-			self.load_model(resume_training=True, path=model_path)
+			self.load_model(resume_training=True)
 		else:
 			self.curr_epoch = 0
 
@@ -173,3 +158,7 @@ class Solver(object):
 				print('Saved Model checkpoints into {}'.format(self.model_save_dir))
 
 		torch.save(self.model.state_dict(), './AudioUnet.pt')
+
+	def eval(self):
+		self.build_model()
+		self.load_model()

@@ -6,13 +6,10 @@ import matplotlib
 matplotlib.use('Agg')
 
 import argparse
-import numpy as np
 
 from model import *
-from train import *
-# from io import *
-from utils import load_h5, upsample_wav
-import dataset
+from train import Trainer
+from eval import Solver
 
 # ----------------------------------------------------------------------------
 
@@ -47,7 +44,7 @@ def make_parser():
     help='beta2 for adam')
   train_parser.add_argument('--save_dir', default='./output/',
     help='Directory to save Model checkpoints')
-  train_parser.add_argument('--save_step', default=10, type=int,
+  train_parser.add_argument('--save_step', default=1, type=int,
     help='epochs after which to save the model')
 
 
@@ -58,9 +55,9 @@ def make_parser():
 
   eval_parser.add_argument('--logname', required=True,
     help='path to training checkpoint')
-  eval_parser.add_argument('--out-label', default='',
+  eval_parser.add_argument('--out_label', default='',
     help='append label to output samples')
-  eval_parser.add_argument('--wav-file-list', 
+  eval_parser.add_argument('--wav_file_list', 
     help='list of audio files for evaluation')
   eval_parser.add_argument('--r', help='upscaling factor', type=int)
   eval_parser.add_argument('--sr', help='high-res sampling rate', 
@@ -71,40 +68,21 @@ def make_parser():
 # ----------------------------------------------------------------------------
 
 def train(args):
-
   # train model
   config = { 'train_path':args.train, 'eval_path':args.val, 'epoch':args.epochs ,'alg' : args.alg, 'lr' : args.lr, 'b1' : args.b1, 'b2':args.b2,
                    'batch_size': args.batch_size, 'num_layers': args.layers,'log_dir': args.logdir, 'model_save_dir':args.save_dir, 'model_save_step':args.save_step}
-  sol = Solver(config)
+  sol = Trainer(config)
   sol.train()
 
 def eval(args):
-  # load model
-  model = get_model(args, 0, args.r, from_ckpt=True, train=False)
-  model.load(args.logname) # from default checkpoint
+  # eval model
 
-  if args.wav_file_list:
-    with open(args.wav_file_list) as f:
-      for line in f:
-        try:
-          print (line.strip())
-          upsample_wav(line.strip(), args, model)
-        except EOFError:
-          print ('WARNING: Error reading file:', line.strip())
-
-def get_model(args, n_dim, r, from_ckpt=False, train=True):
-  """Create a model based on arguments"""  
-  if train:
-    config = { 'alg' : args.alg, 'lr' : args.lr, 'b1' : args.b1, 'b2' : 0.999,
-                   'batch_size': args.batch_size, 'layers': args.layers }
-  else: 
-    opt_params = default_opt
-
-  # create model
-  model = AudioUnet(4)
-  # model = AudioUnet(from_ckpt=from_ckpt, n_dim=n_dim, r=r, 
-                               # opt_params=opt_params, log_prefix=args.logname)
-  return model
+  if os.path.exists(args.logname):
+    config = {'model_path':args.logname, 'out_label':args.out_label, 'wav_list':args.wav_file_list ,'r': args.r, 'sr':args.sr}
+    sol = Solver(config)
+    sol.eval()
+  else:
+    print("No ckpt file")
 
 def main():
   parser = make_parser()
