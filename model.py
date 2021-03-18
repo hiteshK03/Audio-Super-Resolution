@@ -3,8 +3,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from layers import *
-
 n_filters = [128, 384, 512, 512, 512, 512, 512, 512]
 n_filtersizes = [65, 33, 17,  9,  9,  9,  9, 9, 9]
 
