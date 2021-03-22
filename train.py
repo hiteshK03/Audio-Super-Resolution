@@ -25,6 +25,9 @@ class Trainer(object):
 		self.model_save_dir = self.config['model_save_dir']
 		self.model_save_step = self.config['model_save_step']
 
+		if not os.path.exists(self.model_save_dir):
+			os.mkdir(self.model_save_dir)
+
 	def build_model(self):
 		self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -100,8 +103,10 @@ class Trainer(object):
 		self.load_dataset()
 
 		model_path = os.path.join(self.model_save_dir, 'model.tar')
-		if os.path.exists(model_path):
+		if os.path.isfile(model_path):
 			self.load_model(resume_training=True)
+			self.curr_epoch+=1
+			print('ckpt loaded')
 		else:
 			self.curr_epoch = 0
 
@@ -110,7 +115,7 @@ class Trainer(object):
 
 		#train Loops
 
-		for self.curr_epoch in range(self.epoch):
+		while(self.curr_epoch < self.epoch):
 			start_time = time.time()
 			i = 0
 			tot_l2_loss = 0.0
@@ -128,6 +133,7 @@ class Trainer(object):
 				tot_l2_loss += tr_l2_loss.item()
 				tot_l2_snr += tr_l2_snr.item()
 
+				self.curr_epoch+=1
 				i+=1
 				if i%100 == 0:
 					print("Batch number: {:03d}, Training: Loss: {:.4f}, SNR: {:.4f}".format(i, tot_l2_loss/(i), tot_l2_snr/(i)))
