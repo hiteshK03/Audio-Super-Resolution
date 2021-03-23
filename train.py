@@ -80,21 +80,6 @@ class Trainer(object):
 			self.model.load_state_dict(checkpoint['model_state_dict'])
 			self.model.eval()
 
-	def val(self, dataset, n_batch=128):
-		"""Error Evaluation loops"""
-		batch_iterator = DataLoader(dataset, n_batch, shuffle=True, num_workers=4)
-
-		l2_loss, l2_snr = 0, 0
-		tot_l2_loss, tot_snr = 0.0, 0.0
-		self.model.eval()
-		for X, Y in batch_iterator:
-			X, Y = X.to(self.device), Y.to(self.device) 
-			output = self.model(X)
-			l2_loss, l2_snr = avg_sqrt_l2_loss(Y, output)
-			tot_l2_loss += l2_loss.item()
-			tot_snr += l2_snr.item()
-		return tot_l2_loss / len(batch_iterator), tot_snr / len(batch_iterator)
-
 	def train(self):
 
 		self.build_model()
@@ -165,6 +150,17 @@ class Trainer(object):
 
 		torch.save(self.model.state_dict(), './AudioUnet.pt')
 
-	def eval(self):
-		self.build_model()
-		self.load_model()
+	def val(self, dataset, n_batch=128):
+		"""Error Evaluation loops"""
+		batch_iterator = DataLoader(dataset, n_batch, shuffle=True, num_workers=4)
+
+		l2_loss, l2_snr = 0, 0
+		tot_l2_loss, tot_snr = 0.0, 0.0
+		self.model.eval()
+		for X, Y in batch_iterator:
+			X, Y = X.to(self.device), Y.to(self.device) 
+			output = self.model(X)
+			l2_loss, l2_snr = avg_sqrt_l2_loss(Y, output)
+			tot_l2_loss += l2_loss.item()
+			tot_snr += l2_snr.item()
+		return tot_l2_loss / len(batch_iterator), tot_snr / len(batch_iterator)
