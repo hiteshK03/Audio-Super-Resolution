@@ -30,7 +30,7 @@ def make_parser():
     help='number of epochs to train')
   train_parser.add_argument('--batch-size', type=int, default=128,
     help='training batch size')
-  train_parser.add_argument('--logdir', default='./logs',
+  train_parser.add_argument('--logdir', default='./logs/',
     help='folder where logs will be stored')
   train_parser.add_argument('--layers', default=4, type=int,
     help='number of layers in each of the D and U halves of the network')
@@ -53,7 +53,7 @@ def make_parser():
   eval_parser = subparsers.add_parser('eval')
   eval_parser.set_defaults(func=eval)
 
-  eval_parser.add_argument('--logname', required=True,
+  eval_parser.add_argument('--logname', default='./output/model.tar',
     help='path to training checkpoint')
   eval_parser.add_argument('--out_label', default='',
     help='append label to output samples')
