@@ -6,6 +6,8 @@ import torch.nn.functional as F
 n_filters = [128, 384, 512, 512, 512, 512, 512, 512]
 n_filtersizes = [65, 33, 17,  9,  9,  9,  9, 9, 9]
 
+# Need to set last dimension > 1
+
 class PixelShuffle1D(torch.nn.Module):
     """
     1D pixel shuffler. https://arxiv.org/pdf/1609.05158.pdf
